@@ -3,17 +3,19 @@ import { Plus, Edit2, Trash2, Play, Image as ImageIcon, Download } from 'lucide-
 import { Deck, DeckCard } from '../types';
 import { Language, translations } from '../languages';
 import { importDeckFromText } from '../api';
+import { SmartImage } from './SmartImage';
 
 interface DeckListProps {
   decks: Deck[];
   language: Language;
   onCreateDeck: (name: string, cards?: DeckCard[]) => void;
   onDeleteDeck: (id: string) => void;
+  onDeleteDecks: (ids: string[]) => void;
   onRenameDeck: (id: string, newName: string) => void;
   onSelectDeck: (id: string) => void;
 }
 
-export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onRenameDeck, onSelectDeck }: DeckListProps) {
+export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onDeleteDecks, onRenameDeck, onSelectDeck }: DeckListProps) {
   const t = translations[language];
   const [isCreating, setIsCreating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -22,6 +24,8 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onRename
   const [isImportLoading, setIsImportLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,25 +62,66 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onRename
     }
   };
 
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size > 0 && window.confirm(`${t.confirmDelete} (${selectedIds.size} ${t.decks.toLowerCase()})?`)) {
+      onDeleteDecks(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      setIsSelectMode(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{t.decks}</h2>
         <div className="flex gap-3">
-          <button
-            onClick={() => setIsImporting(true)}
-            className="flex items-center gap-2 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded-xl transition-colors shadow-sm"
-          >
-            <Download size={20} />
-            <span className="hidden sm:inline">Import Deck</span>
-          </button>
-          <button
-            onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition-colors shadow-sm"
-          >
-            <Plus size={20} />
-            {t.createDeck}
-          </button>
+          {decks.length > 0 && (
+            <button
+              onClick={() => {
+                setIsSelectMode(!isSelectMode);
+                setSelectedIds(new Set());
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors shadow-sm ${isSelectMode ? 'bg-amber-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white'}`}
+            >
+              {isSelectMode ? t.cancel : 'Select'}
+            </button>
+          )}
+          {isSelectMode ? (
+            <button
+              onClick={handleBulkDelete}
+              disabled={selectedIds.size === 0}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl transition-colors shadow-sm"
+            >
+              <Trash2 size={20} />
+              {t.delete} ({selectedIds.size})
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setIsImporting(true)}
+                className="flex items-center gap-2 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded-xl transition-colors shadow-sm"
+              >
+                <Download size={20} />
+                <span className="hidden sm:inline">Import Deck</span>
+              </button>
+              <button
+                onClick={() => setIsCreating(true)}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition-colors shadow-sm"
+              >
+                <Plus size={20} />
+                {t.createDeck}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -161,7 +206,18 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onRename
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {decks.map((deck) => (
-          <div key={deck.id} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow group">
+          <div 
+            key={deck.id} 
+            className={`bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border transition-all group relative ${isSelectMode && selectedIds.has(deck.id) ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-gray-100 dark:border-gray-700 hover:shadow-md'}`}
+            onClick={() => isSelectMode && toggleSelection(deck.id)}
+          >
+            {isSelectMode && (
+              <div className="absolute top-4 left-4 z-20">
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.has(deck.id) ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-gray-300'}`}>
+                  {selectedIds.has(deck.id) && <Play size={12} className="fill-current" style={{ transform: 'rotate(90deg)' }} />}
+                </div>
+              </div>
+            )}
             {editingId === deck.id ? (
               <div className="space-y-4">
                 <input
@@ -190,9 +246,9 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onRename
               <>
                 <div className="h-40 mb-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 relative flex-shrink-0 group-hover:opacity-90 transition-opacity">
                   {deck.coverImage ? (
-                    <img src={deck.coverImage} alt="Cover" className="w-full h-full object-cover object-top" />
+                    <SmartImage src={deck.coverImage} alt="Cover" className="w-full h-full object-cover object-top" />
                   ) : deck.cards.length > 0 ? (
-                    <img src={deck.cards[0].image} alt="Cover" className="w-full h-full object-cover object-top opacity-50" />
+                    <SmartImage src={deck.cards[0].image} alt="Cover" className="w-full h-full object-cover object-top opacity-50" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
                       <ImageIcon size={32} />
@@ -203,36 +259,39 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onRename
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate pr-4" title={deck.name}>
                     {deck.name}
                   </h3>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => {
-                        setEditingId(deck.id);
-                        setEditName(deck.name);
-                      }}
-                      className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                      title={t.rename}
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm(t.confirmDelete)) {
-                          onDeleteDeck(deck.id);
-                        }
-                      }}
-                      className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
-                      title={t.delete}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  {!isSelectMode && (
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => {
+                          setEditingId(deck.id);
+                          setEditName(deck.name);
+                        }}
+                        className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                        title={t.rename}
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(t.confirmDelete)) {
+                            onDeleteDeck(deck.id);
+                          }
+                        }}
+                        className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
+                        title={t.delete}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                   {deck.cards.reduce((acc, card) => acc + card.quantity, 0)} {t.cardsInDeck.toLowerCase()}
                 </div>
                 <button
-                  onClick={() => onSelectDeck(deck.id)}
-                  className="w-full flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white py-2.5 rounded-xl transition-colors font-medium"
+                  onClick={() => !isSelectMode && onSelectDeck(deck.id)}
+                  disabled={isSelectMode}
+                  className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-colors font-medium ${isSelectMode ? 'bg-gray-100 dark:bg-gray-800 text-gray-400' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white'}`}
                 >
                   <Play size={18} />
                   {t.edit}

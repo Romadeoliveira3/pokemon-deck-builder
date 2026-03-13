@@ -6,6 +6,7 @@ import { AdvancedSearch } from './AdvancedSearch';
 import { Language, translations } from '../languages';
 import { searchCards } from '../api';
 import { CardModal } from './CardModal';
+import { SmartImage } from './SmartImage';
 
 interface DeckBuilderProps {
   deck: Deck;
@@ -29,6 +30,8 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const deckRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,6 +78,28 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
       setHasUnsavedChanges(true);
       return { ...prev, cards: newCards, updatedAt: Date.now() };
     });
+  };
+
+  const toggleCardSelection = (id: string) => {
+    setSelectedCardIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkRemoveCards = () => {
+    if (selectedCardIds.size > 0 && window.confirm(`Remover ${selectedCardIds.size} cartas do deck?`)) {
+      setCurrentDeck(prev => ({
+        ...prev,
+        cards: prev.cards.filter(c => !selectedCardIds.has(c.id)),
+        updatedAt: Date.now()
+      }));
+      setSelectedCardIds(new Set());
+      setIsSelectMode(false);
+      setHasUnsavedChanges(true);
+    }
   };
 
   const handleSave = () => {
@@ -188,7 +213,7 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
               {searchResults.map(card => (
                 <div key={card.id} className="relative group cursor-pointer flex flex-col" onClick={() => setSelectedCard(card)}>
                   <div className="relative">
-                    <img src={card.image} alt={card.name} className="w-full rounded-lg shadow-sm group-hover:shadow-md transition-all group-hover:scale-105" loading="lazy" crossOrigin="anonymous" />
+                    <SmartImage src={card.image} alt={card.name} className="w-full rounded-lg shadow-sm group-hover:shadow-md transition-all group-hover:scale-105" loading="lazy" crossOrigin="anonymous" />
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2 z-10">
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleAddCard(card); }}
@@ -246,6 +271,27 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
               {totalCards} / 60
             </span>
 
+            <button
+              onClick={() => {
+                setIsSelectMode(!isSelectMode);
+                setSelectedCardIds(new Set());
+              }}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-colors shadow-sm ${isSelectMode ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'}`}
+            >
+              {isSelectMode ? t.cancel : 'Select'}
+            </button>
+
+            {isSelectMode && (
+              <button
+                onClick={handleBulkRemoveCards}
+                disabled={selectedCardIds.size === 0}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl transition-colors shadow-sm"
+              >
+                <Trash2 size={18} />
+                {t.delete} ({selectedCardIds.size})
+              </button>
+            )}
+
             <div className="relative">
               <button
                 onClick={() => setIsShareOpen(!isShareOpen)}
@@ -297,55 +343,99 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50 dark:bg-gray-900/20" ref={deckRef}>
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50 dark:bg-gray-900/20 pb-20" ref={deckRef}>
           {currentDeck.cards.length === 0 ? (
             <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
               {t.deckEmpty}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {currentDeck.cards.map(card => (
-                <div key={card.id} className="relative group flex flex-col cursor-pointer" onClick={() => setSelectedCard(card)}>
-                  <div className="relative">
-                    <img src={card.image} alt={card.name} className="w-full rounded-lg shadow-sm" loading="lazy" crossOrigin="anonymous" />
-                    {currentDeck.coverImage === card.image && (
-                      <div className="absolute -top-2 -left-2 w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center shadow-md border-2 border-white dark:border-gray-800 z-10" title="Cover Image">
-                        <Star size={16} className="fill-current" />
-                      </div>
-                    )}
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center font-bold shadow-md border-2 border-white dark:border-gray-800 z-10">
-                      {card.quantity}
+            <div className="space-y-8">
+              {[
+                { title: 'Pokémon', key: 'Pokemon' },
+                { title: 'Trainer', key: 'Trainer' },
+                { title: 'Energy', key: 'Energy' },
+                { title: 'Other', key: 'Other' }
+              ].map(section => {
+                const sectionCards = currentDeck.cards.filter(c => 
+                  section.key === 'Other' 
+                    ? !['Pokemon', 'Trainer', 'Energy'].includes(c.category || '')
+                    : c.category === section.key
+                );
+
+                if (sectionCards.length === 0) return null;
+
+                const count = sectionCards.reduce((acc, c) => acc + c.quantity, 0);
+
+                return (
+                  <div key={section.key} className="space-y-4">
+                    <div className="flex items-center gap-3 border-b border-gray-200 dark:border-gray-800 pb-2">
+                      <h3 className="text-sm font-black uppercase tracking-[0.2em] text-gray-900 dark:text-white flex items-center gap-2">
+                        {section.title}
+                        <span className="text-[10px] bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded-full text-gray-500">
+                          {count}
+                        </span>
+                      </h3>
                     </div>
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center gap-3 z-10">
-                      <div className="flex items-center gap-4">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleRemoveCard(card.id); }}
-                          className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {sectionCards.map(card => (
+                        <div 
+                          key={card.id} 
+                          className={`relative group flex flex-col cursor-pointer border rounded-xl p-1 transition-all ${isSelectMode && selectedCardIds.has(card.id) ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-transparent'}`} 
+                          onClick={() => isSelectMode ? toggleCardSelection(card.id) : setSelectedCard(card)}
                         >
-                          <Minus size={20} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleAddCard(card); }}
-                          disabled={card.quantity >= 4}
-                          className="p-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-emerald-500 text-white rounded-full transition-colors"
-                        >
-                          <Plus size={20} />
-                        </button>
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleSetCover(card.image); }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 transition-colors ${currentDeck.coverImage === card.image ? 'bg-yellow-500 text-white' : 'bg-gray-800/80 text-white hover:bg-yellow-500'}`}
-                      >
-                        <Star size={14} className={currentDeck.coverImage === card.image ? 'fill-current' : ''} />
-                        {t.setCover}
-                      </button>
+                          <div className="relative">
+                            <SmartImage src={card.image} alt={card.name} className="w-full rounded-lg shadow-sm" loading="lazy" crossOrigin="anonymous" />
+                            {isSelectMode && (
+                              <div className="absolute top-2 left-2 z-20">
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedCardIds.has(card.id) ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white/80 border-gray-300'}`}>
+                                  {selectedCardIds.has(card.id) && <Plus size={12} className="rotate-45" />}
+                                </div>
+                              </div>
+                            )}
+                            {currentDeck.coverImage === card.image && (
+                              <div className="absolute -top-2 -left-2 w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center shadow-md border-2 border-white dark:border-gray-800 z-10" title="Cover Image">
+                                <Star size={16} className="fill-current" />
+                              </div>
+                            )}
+                            <div className="absolute -top-2 -right-2 w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center font-bold shadow-md border-2 border-white dark:border-gray-800 z-10">
+                              {card.quantity}
+                            </div>
+                            {!isSelectMode && (
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center gap-3 z-10">
+                                <div className="flex items-center gap-4">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleRemoveCard(card.id); }}
+                                    className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
+                                  >
+                                    <Minus size={20} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleAddCard(card); }}
+                                    disabled={card.quantity >= 4}
+                                    className="p-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-emerald-500 text-white rounded-full transition-colors"
+                                  >
+                                    <Plus size={20} />
+                                  </button>
+                                </div>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleSetCover(card.image); }}
+                                  className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 transition-colors ${currentDeck.coverImage === card.image ? 'bg-yellow-500 text-white' : 'bg-gray-800/80 text-white hover:bg-yellow-500'}`}
+                                >
+                                  <Star size={14} className={currentDeck.coverImage === card.image ? 'fill-current' : ''} />
+                                  {t.setCover}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-xs text-center mt-2 font-medium text-gray-700 dark:text-gray-300 truncate px-1" title={card.name}>
+                            {card.name}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <span className="text-xs text-center mt-2 font-medium text-gray-700 dark:text-gray-300 truncate px-1" title={card.name}>
-                    {card.name}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

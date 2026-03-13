@@ -72,6 +72,13 @@ export default function App() {
     }
   };
 
+  const handleDeleteDecks = (ids: string[]) => {
+    setDecks(prev => prev.filter(d => !ids.includes(d.id)));
+    if (currentDeckId && ids.includes(currentDeckId)) {
+      setCurrentDeckId(null);
+    }
+  };
+
   const handleRenameDeck = (id: string, newName: string) => {
     setDecks(prev => prev.map(d => d.id === id ? { ...d, name: newName, updatedAt: Date.now() } : d));
   };
@@ -94,7 +101,7 @@ export default function App() {
   const currentDeck = decks.find(d => d.id === currentDeckId);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200 pb-12">
       <header className="h-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
           <div 
@@ -177,6 +184,7 @@ export default function App() {
             language={language}
             onCreateDeck={handleCreateDeck}
             onDeleteDeck={handleDeleteDeck}
+            onDeleteDecks={handleDeleteDecks}
             onRenameDeck={handleRenameDeck}
             onSelectDeck={setCurrentDeckId}
           />
