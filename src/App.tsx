@@ -6,6 +6,7 @@ import { Language, translations } from './languages';
 import { DeckList } from './components/DeckList';
 import { DeckBuilder } from './components/DeckBuilder';
 import { FavoritesList } from './components/FavoritesList';
+import { DeveloperFooter } from './components/DeveloperFooter';
 
 export default function App() {
   const [decks, setDecks] = useLocalStorage<Deck[]>('pokedeck-decks', []);
@@ -181,6 +182,7 @@ export default function App() {
           />
         )}
       </main>
+      <DeveloperFooter />
     </div>
   );
 }
