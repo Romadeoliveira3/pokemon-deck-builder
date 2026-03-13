@@ -3,6 +3,7 @@ import { Heart, Search, X, ArrowLeft } from 'lucide-react';
 import { Card } from '../types';
 import { Language, translations } from '../languages';
 import { CardModal } from './CardModal';
+import { SmartImage } from './SmartImage';
 
 interface FavoritesListProps {
   favorites: Card[];
@@ -82,7 +83,7 @@ export function FavoritesList({ favorites, language, onToggleFavorite, onBack }:
               onClick={() => setSelectedCard(card)}
             >
               <div className="relative">
-                <img 
+                <SmartImage 
                   src={card.image} 
                   alt={card.name} 
                   className="w-full rounded-lg shadow-sm group-hover:shadow-md transition-all group-hover:scale-105" 

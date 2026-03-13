@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Heart, Plus } from 'lucide-react';
 import { Card } from '../types';
 import { Language, translations } from '../languages';
+import { SmartImage } from './SmartImage';
 
 interface CardModalProps {
   card: Card;
@@ -35,7 +36,7 @@ export function CardModal({ card, language, isFavorite, onClose, onToggleFavorit
         </div>
         
         <div className="p-6 flex justify-center bg-gray-50 dark:bg-gray-800/50">
-          <img 
+          <SmartImage 
             src={card.image} 
             alt={card.name} 
             className="w-full max-w-[350px] h-auto rounded-xl shadow-lg"
