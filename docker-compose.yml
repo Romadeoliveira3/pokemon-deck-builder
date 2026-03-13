@@ -5,9 +5,12 @@ services:
       target: development
     ports:
       - "3000:3000"
+      - "3001:3001"
     volumes:
       - .:/app
       - /app/node_modules
+      - ./server/db:/app/server/db
+    command: npm start
     environment:
       - NODE_ENV=development
       - VITE_PORT=3000

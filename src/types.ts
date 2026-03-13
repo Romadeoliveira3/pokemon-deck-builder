@@ -10,6 +10,7 @@ export interface CardFilters {
   rarity?: string[];
   set?: string;
   serie?: string;
+  localId?: string;
 }
 
 export interface Card {
