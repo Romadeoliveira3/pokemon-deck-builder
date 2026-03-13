@@ -1,10 +1,28 @@
 import express from 'express';
 import db from './db';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
+
+// Servir arquivos estáticos do frontend em produção
+if (process.env.NODE_ENV === 'production') {
+  const distPath = path.resolve(__dirname, '../dist');
+  app.use(express.static(distPath));
+  
+  // Rota curinga para SPA (React Router)
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 // Endpoint de busca de cartas
 app.get('/api/cards', (req, res) => {
