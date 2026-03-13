@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
+    "@tcgdex/sdk": "^2.7.1",
     "@vitejs/plugin-react": "^5.0.4",
     "better-sqlite3": "^12.6.2",
     "dotenv": "^17.2.3",

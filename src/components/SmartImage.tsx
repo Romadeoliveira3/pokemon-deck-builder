@@ -23,7 +23,7 @@ export function SmartImage({ src, alt, className, fallbackUrl, maxRetries = 3, .
       setFailed(true);
     } else {
       setFailed(true);
-      setCurrentSrc('https://assets.tcgdex.net/univ/card/back/low.png');
+      setCurrentSrc('/card-back.png');
     }
   };
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Play, Image as ImageIcon, Download } from 'lucide-react';
-import { Deck, DeckCard } from '../types';
+import { Deck, DeckCard, DeckFormat } from '../types';
 import { Language, translations } from '../languages';
 import { importDeckFromText } from '../api';
 import { SmartImage } from './SmartImage';
@@ -8,7 +8,7 @@ import { SmartImage } from './SmartImage';
 interface DeckListProps {
   decks: Deck[];
   language: Language;
-  onCreateDeck: (name: string, cards?: DeckCard[]) => void;
+  onCreateDeck: (name: string, cards?: DeckCard[], format?: DeckFormat) => void;
   onDeleteDeck: (id: string) => void;
   onDeleteDecks: (ids: string[]) => void;
   onRenameDeck: (id: string, newName: string) => void;
@@ -20,6 +20,7 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onDelete
   const [isCreating, setIsCreating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [newDeckName, setNewDeckName] = useState('');
+  const [newDeckFormat, setNewDeckFormat] = useState<DeckFormat>('Standard');
   const [importText, setImportText] = useState('');
   const [isImportLoading, setIsImportLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -30,8 +31,9 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onDelete
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (newDeckName.trim()) {
-      onCreateDeck(newDeckName.trim());
+      onCreateDeck(newDeckName.trim(), [], newDeckFormat);
       setNewDeckName('');
+      setNewDeckFormat('Standard');
       setIsCreating(false);
     }
   };
@@ -41,9 +43,10 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onDelete
     if (importText.trim() && newDeckName.trim()) {
       setIsImportLoading(true);
       try {
-        const cards = await importDeckFromText(importText, language);
-        onCreateDeck(newDeckName.trim(), cards);
+        const cards = await importDeckFromText(importText, language, newDeckFormat);
+        onCreateDeck(newDeckName.trim(), cards, newDeckFormat);
         setNewDeckName('');
+        setNewDeckFormat('Standard');
         setImportText('');
         setIsImporting(false);
       } catch (error) {
@@ -153,6 +156,23 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onDelete
               {t.create}
             </button>
           </div>
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t.format}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {(['Standard', 'Expanded', 'GLC', 'None'] as DeckFormat[]).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setNewDeckFormat(f)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${newDeckFormat === f ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                >
+                  {t[f.toLowerCase() as keyof typeof t] || f}
+                </button>
+              ))}
+            </div>
+          </div>
         </form>
       )}
 
@@ -171,6 +191,23 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onDelete
               autoFocus
               required
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t.format}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {(['Standard', 'Expanded', 'GLC', 'None'] as DeckFormat[]).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setNewDeckFormat(f)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${newDeckFormat === f ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                >
+                  {t[f.toLowerCase() as keyof typeof t] || f}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -285,8 +322,13 @@ export function DeckList({ decks, language, onCreateDeck, onDeleteDeck, onDelete
                     </div>
                   )}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                  {deck.cards.reduce((acc, card) => acc + card.quantity, 0)} {t.cardsInDeck.toLowerCase()}
+                <div className="text-sm text-gray-500 dark:text-gray-400 mb-6 flex justify-between items-center">
+                  <span>{deck.cards.reduce((acc, card) => acc + card.quantity, 0)} {t.cardsInDeck.toLowerCase()}</span>
+                  {deck.format && deck.format !== 'None' && (
+                    <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                      {deck.format}
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={() => !isSelectMode && onSelectDeck(deck.id)}

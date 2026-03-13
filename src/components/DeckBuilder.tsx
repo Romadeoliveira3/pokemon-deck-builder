@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Search, Save, Trash2, Edit2, Plus, Minus, List, Share2, ChevronDown, Link, FileText, Image as ImageIcon, Star, Maximize2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { Deck, Card, DeckCard, CardFilters } from '../types';
+import { Deck, Card, DeckCard, CardFilters, DeckFormat } from '../types';
 import { AdvancedSearch } from './AdvancedSearch';
 import { Language, translations } from '../languages';
 import { searchCards } from '../api';
@@ -38,7 +38,7 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
     const timer = setTimeout(async () => {
       if (Object.keys(searchFilters).length > 0) {
         setIsSearching(true);
-        const results = await searchCards(searchFilters, language);
+        const results = await searchCards({ ...searchFilters, format: currentDeck.format }, language);
         setSearchResults(results);
         setIsSearching(false);
       } else {
@@ -47,7 +47,7 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchFilters, language]);
+  }, [searchFilters, language, currentDeck.format]);
 
   const handleAddCard = (card: Card) => {
     setCurrentDeck(prev => {
@@ -214,6 +214,9 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
                 <div key={card.id} className="relative group cursor-pointer flex flex-col" onClick={() => setSelectedCard(card)}>
                   <div className="relative">
                     <SmartImage src={card.image} alt={card.name} className="w-full rounded-lg shadow-sm group-hover:shadow-md transition-all group-hover:scale-105" loading="lazy" crossOrigin="anonymous" />
+                    <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-gray-900/80 text-white text-[10px] font-bold rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                      {card.setAbbreviation}
+                    </div>
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2 z-10">
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleAddCard(card); }}
@@ -267,6 +270,26 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
           </div>
           
           <div className="flex items-center gap-2">
+            <div className="relative group">
+              <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-bold uppercase tracking-wider">
+                {currentDeck.format || 'None'}
+              </button>
+              <div className="absolute left-0 top-full mt-1 w-32 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[60]">
+                {(['Standard', 'Expanded', 'GLC', 'None'] as DeckFormat[]).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => {
+                      setCurrentDeck(prev => ({ ...prev, format: f, updatedAt: Date.now() }));
+                      setHasUnsavedChanges(true);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-xl last:rounded-b-xl ${currentDeck.format === f ? 'text-emerald-600 font-bold' : ''}`}
+                  >
+                    {t[f.toLowerCase() as keyof typeof t] || f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <span className={`text-sm font-medium px-3 py-1 rounded-full ${totalCards === 60 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}`}>
               {totalCards} / 60
             </span>
@@ -385,6 +408,9 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
                         >
                           <div className="relative">
                             <SmartImage src={card.image} alt={card.name} className="w-full rounded-lg shadow-sm" loading="lazy" crossOrigin="anonymous" />
+                            <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-gray-900/80 text-white text-[10px] font-bold rounded-md z-20">
+                              {card.setAbbreviation}
+                            </div>
                             {isSelectMode && (
                               <div className="absolute top-2 left-2 z-20">
                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedCardIds.has(card.id) ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white/80 border-gray-300'}`}>
@@ -458,7 +484,12 @@ export function DeckBuilder({ deck, language, favorites, onToggleFavorite, onBac
               <div key={card.id} className="flex items-center justify-between text-sm group p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
                 <div className="flex items-center gap-3 overflow-hidden">
                   <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400 w-4">{card.quantity}x</span>
-                  <span className="text-gray-700 dark:text-gray-300 truncate" title={card.name}>{card.name}</span>
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="text-gray-700 dark:text-gray-300 truncate font-medium" title={card.name}>{card.name}</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono uppercase">
+                      {card.setAbbreviation} {card.localId}
+                    </span>
+                  </div>
                 </div>
                 <div className="opacity-0 group-hover:opacity-100 flex gap-1 flex-shrink-0">
                   <button onClick={() => handleRemoveCard(card.id)} className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 p-1 rounded transition-colors">

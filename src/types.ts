@@ -1,3 +1,5 @@
+export type DeckFormat = 'Standard' | 'Expanded' | 'GLC' | 'None';
+
 export interface CardFilters {
   name?: string;
   category?: string[];
@@ -9,6 +11,8 @@ export interface CardFilters {
   retreat?: number;
   rarity?: string[];
   set?: string;
+  setAbbreviation?: string;
+  format?: DeckFormat;
   serie?: string;
   localId?: string;
 }
@@ -29,6 +33,7 @@ export interface DeckCard extends Card {
 export interface Deck {
   id: string;
   name: string;
+  format?: DeckFormat;
   cards: DeckCard[];
   coverImage?: string;
   createdAt: number;

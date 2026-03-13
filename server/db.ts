@@ -1,7 +1,12 @@
 import Database from 'better-sqlite3';
-import { join } from 'path';
+import path, { join } from 'path';
 
-const dbPath = join(process.cwd(), 'server/db/pokemon.db');
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const dbPath = join(__dirname, 'db/pokemon.db');
+console.log('Utilizando banco de dados em:', dbPath);
 const db = new Database(dbPath);
 
 // Configuração inicial do banco
@@ -9,7 +14,9 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS sets (
     id TEXT PRIMARY KEY,
     name TEXT,
-    abbreviation TEXT
+    abbreviation TEXT,
+    standard INTEGER,
+    expanded INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS cards (

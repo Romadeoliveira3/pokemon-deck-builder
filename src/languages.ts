@@ -41,6 +41,11 @@ export const translations = {
     addToDeck: 'Add to Deck',
     noFavorites: 'No favorite cards yet',
     noFavoritesDesc: 'Click on a card to view its details and add it to your favorites.',
+    format: 'Format',
+    standard: 'Standard',
+    expanded: 'Expanded',
+    glc: 'GLC',
+    none: 'No Format',
   },
   pt: {
     appTitle: 'Have Want BR - Construtor de PokéDeck',
@@ -82,6 +87,11 @@ export const translations = {
     addToDeck: 'Adicionar ao Deck',
     noFavorites: 'Nenhuma carta favorita ainda',
     noFavoritesDesc: 'Clique em uma carta para ver seus detalhes e adicioná-la aos seus favoritos.',
+    format: 'Formato',
+    standard: 'Padrão (Standard)',
+    expanded: 'Expandido (Expanded)',
+    glc: 'GLC',
+    none: 'Sem Formato',
   },
   es: {
     appTitle: 'Have Want BR - Constructor de PokéDeck',
@@ -123,5 +133,10 @@ export const translations = {
     addToDeck: 'Añadir al Mazo',
     noFavorites: 'Aún no hay cartas favoritas',
     noFavoritesDesc: 'Haz clic en una carta para ver sus detalles y añadirla a tus favoritos.',
+    format: 'Formato',
+    standard: 'Estándar',
+    expanded: 'Expandido',
+    glc: 'GLC',
+    none: 'Sin Formato',
   }
 };

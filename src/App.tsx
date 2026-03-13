@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Moon, Sun, Globe, Heart } from 'lucide-react';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { Deck, DeckCard, Card } from './types';
+import { Deck, DeckCard, Card, DeckFormat } from './types';
 import { Language, translations } from './languages';
 import { DeckList } from './components/DeckList';
 import { DeckBuilder } from './components/DeckBuilder';
@@ -9,10 +9,10 @@ import { FavoritesList } from './components/FavoritesList';
 import { DeveloperFooter } from './components/DeveloperFooter';
 
 export default function App() {
-  const [decks, setDecks] = useLocalStorage<Deck[]>('pokedeck-decks', []);
-  const [favorites, setFavorites] = useLocalStorage<Card[]>('pokedeck-favorites', []);
-  const [language, setLanguage] = useLocalStorage<Language>('pokedeck-lang', 'en');
-  const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('pokedeck-theme', 'light');
+  const [decks, setDecks] = useState<Deck[]>([]);
+  const [favorites, setFavorites] = useState<Card[]>([]);
+  const [language, setLanguage] = useState<Language>('en');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
 
@@ -54,10 +54,11 @@ export default function App() {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
-  const handleCreateDeck = (name: string, cards: DeckCard[] = []) => {
+  const handleCreateDeck = (name: string, cards: DeckCard[] = [], format?: DeckFormat) => {
     const newDeck: Deck = {
       id: crypto.randomUUID(),
       name,
+      format,
       cards,
       createdAt: Date.now(),
       updatedAt: Date.now(),
